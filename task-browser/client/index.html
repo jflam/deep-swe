@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DeepSWE Task Browser</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">D</span>
+      <div>
+        <h1>DeepSWE Browser</h1>
+        <p id="task-count">Loading tasks...</p>
+      </div>
+    </div>
+
+    <label class="search">
+      <span>Search tasks</span>
+      <input id="search" type="search" placeholder="HTTPX, Go, pagination..." autocomplete="off">
+    </label>
+
+    <div class="filters">
+      <label>
+        Language
+        <select id="language-filter"></select>
+      </label>
+      <label>
+        Category
+        <select id="category-filter"></select>
+      </label>
+    </div>
+
+    <div id="task-list" class="task-list" aria-label="Benchmark tasks"></div>
+  </aside>
+
+  <main class="content">
+    <div id="empty-state" class="empty-state">
+      <h2>Select a task</h2>
+      <p>Choose a benchmark task from the left to review its prompt and reference patch.</p>
+    </div>
+
+    <article id="task-detail" class="task-detail" hidden></article>
+  </main>
+
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

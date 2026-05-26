@@ -348,6 +348,39 @@
       background: linear-gradient(135deg, rgba(120, 53, 15, 0.22), rgba(15, 26, 45, 0.82));
     }
 
+    .score-grid {
+      grid-template-columns: 1.25fr 0.75fr;
+    }
+
+    .score-card {
+      display: grid;
+      grid-template-columns: minmax(120px, 1fr) repeat(4, minmax(70px, 0.45fr));
+      gap: 1px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 18px;
+      background: rgba(148, 163, 184, 0.16);
+      font-size: 0.9rem;
+    }
+
+    .score-card span {
+      padding: 12px;
+      background: rgba(2, 8, 18, 0.4);
+      color: var(--muted);
+    }
+
+    .score-card .head,
+    .score-card .model {
+      color: #eaf5ff;
+      font-weight: 800;
+      background: rgba(148, 163, 184, 0.12);
+    }
+
+    .score-card .score {
+      color: var(--green);
+      font-weight: 900;
+    }
+
     footer {
       margin-top: 28px;
       color: var(--muted);
@@ -360,7 +393,8 @@
       .three-col,
       .flow,
       .two-col,
-      .bars {
+      .bars,
+      .score-grid {
         grid-template-columns: 1fr 1fr;
       }
 
@@ -389,12 +423,38 @@
       .three-col,
       .flow,
       .two-col,
-      .bars {
+      .bars,
+      .score-grid {
         grid-template-columns: 1fr;
       }
 
       .bar-row {
         grid-template-columns: 88px 1fr 34px;
+      }
+
+      .score-card {
+        display: block;
+      }
+
+      .score-card .head {
+        display: none;
+      }
+
+      .score-card span {
+        display: block;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+      }
+
+      .score-card span:nth-child(5n + 3)::before {
+        content: "Tokens: ";
+      }
+
+      .score-card span:nth-child(5n + 4)::before {
+        content: "Time: ";
+      }
+
+      .score-card span:nth-child(5n + 5)::before {
+        content: "Cost: ";
       }
     }
   </style>
@@ -412,17 +472,50 @@
       </p>
       <div class="grid metrics">
         <div class="metric"><strong>113</strong><span>benchmark tasks</span></div>
-        <div class="metric"><strong>92</strong><span>upstream repositories</span></div>
+        <div class="metric"><strong>91</strong><span>upstream repositories</span></div>
         <div class="metric"><strong>5</strong><span>programming languages</span></div>
-        <div class="metric"><strong>0</strong><span>internet-enabled tasks</span></div>
-        <div class="metric"><strong>30m</strong><span>verifier timeout</span></div>
-        <div class="metric"><strong>90m</strong><span>agent timeout</span></div>
+        <div class="metric"><strong>70%</strong><span>top DeepSWE score</span></div>
+        <div class="metric"><strong>1.4%</strong><span>verifier disagreement</span></div>
+        <div class="metric"><strong>5.5x</strong><span>more solution code</span></div>
       </div>
     </section>
 
     <section class="section">
       <div class="section-title">
-        <h2>1. Repository shape</h2>
+        <h2>1. Why DeepSWE exists</h2>
+        <p>The launch blog frames DeepSWE as a response to benchmark contamination, narrow repo coverage, overspecified prompts, and noisy verifiers.</p>
+      </div>
+      <div class="grid three-col">
+        <div class="card callout">
+          <h3>Contamination-free tasks</h3>
+          <p>
+            Tasks are written from scratch rather than copied from public commits or pull requests.
+            Some are motivated by unresolved issues, but the fixes are novel and are not merged
+            upstream, reducing the chance that models have memorized the answer.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Short, realistic prompts</h3>
+          <p>
+            Prompts are intentionally closer to how developers message agents: behavior-focused,
+            shorter than SWE-Bench Pro prompts, and light on prescriptive interface blocks. Agents
+            must explore the repository instead of executing an overspecified checklist.
+          </p>
+        </div>
+        <div class="card risk">
+          <h3>Cleaner grading signal</h3>
+          <p>
+            The blog reports an LLM-audited verifier disagreement rate of 1.4% for DeepSWE versus
+            32% for SWE-Bench Pro, where audited errors split into roughly 8% false positives and
+            24% false negatives.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>2. Repository shape</h2>
         <p>The repo is intentionally shallow at the top level: documentation plus task directories. Complexity lives inside task capsules.</p>
       </div>
       <div class="grid two-col">
@@ -457,7 +550,7 @@
 
     <section class="section">
       <div class="section-title">
-        <h2>2. Corpus composition</h2>
+        <h2>3. Corpus composition</h2>
         <p>Coverage is balanced across Python, Go, and TypeScript, with smaller Rust and JavaScript slices.</p>
       </div>
       <div class="grid bars">
@@ -485,7 +578,7 @@
 
     <section class="section">
       <div class="section-title">
-        <h2>3. Execution and grading pipeline</h2>
+        <h2>4. Execution and grading pipeline</h2>
         <p>Every task uses the same normalized verifier wrapper, differing mainly by pinned commit and task-specific test patch.</p>
       </div>
       <div class="grid flow">
@@ -514,7 +607,7 @@
 
     <section class="section">
       <div class="section-title">
-        <h2>4. Metadata and resource profile</h2>
+        <h2>5. Metadata and resource profile</h2>
         <p>The corpus is deliberately uniform in infrastructure so score differences reflect task-solving ability more than environment variance.</p>
       </div>
       <div class="grid three-col">
@@ -532,12 +625,12 @@
         <div class="card">
           <h3>Repository diversity</h3>
           <p>
-            The 113 tasks span 92 unique upstream repositories. Most repositories appear once,
+            The 113 tasks span 91 unique upstream repositories. Most repositories appear once,
             while a small number intentionally contribute multiple related tasks.
           </p>
           <div class="pill-row">
-            <span class="pill">77 repos x 1 task</span>
-            <span class="pill">11 repos x 2 tasks</span>
+            <span class="pill">75 repos x 1 task</span>
+            <span class="pill">12 repos x 2 tasks</span>
             <span class="pill">3 repos x 3 tasks</span>
             <span class="pill">1 repo x 5 tasks</span>
           </div>
@@ -557,7 +650,7 @@
 
     <section class="section">
       <div class="section-title">
-        <h2>5. Artifact scale</h2>
+        <h2>6. Artifact scale</h2>
         <p>The tests and reference patches are large enough to exercise integration behavior, not just isolated functions.</p>
       </div>
       <div class="grid two-col">
@@ -577,7 +670,9 @@
             Median verifier patches and reference patches are both around 800 lines, which
             indicates tasks often require broad implementation plus comprehensive tests. The
             short prompts force agents to recover intent from codebase context, while the large
-            verifier patches encode nuanced behavioral contracts.
+            verifier patches encode nuanced behavioral contracts. The blog sharpens this point:
+            DeepSWE prompts are about half as long as SWE-Bench Pro prompts, yet solutions require
+            5.5x more code and roughly 2x more agent output tokens.
           </p>
         </div>
       </div>
@@ -585,7 +680,41 @@
 
     <section class="section">
       <div class="section-title">
-        <h2>6. Engineering implications</h2>
+        <h2>7. Agent performance signal</h2>
+        <p>The blog's most interesting result is that DeepSWE spreads frontier agents into wider, more developer-recognizable gaps than public benchmarks.</p>
+      </div>
+      <div class="grid score-grid">
+        <div class="card">
+          <h3>Leaderboard economics</h3>
+          <div class="score-card" role="table" aria-label="DeepSWE model performance">
+            <span class="head">Model</span><span class="head">Score</span><span class="head">Tokens</span><span class="head">Time</span><span class="head">Cost</span>
+            <span class="model">GPT-5.5</span><span class="score">70.0%</span><span>46.5k</span><span>20m</span><span>$5.8</span>
+            <span class="model">GPT-5.4</span><span class="score">55.5%</span><span>67.4k</span><span>24m</span><span>$3.3</span>
+            <span class="model">Claude Opus 4.7</span><span class="score">54.2%</span><span>97.2k</span><span>37m</span><span>$16.0</span>
+            <span class="model">Claude Sonnet 4.6</span><span class="score">31.8%</span><span>70.8k</span><span>35m</span><span>$4.8</span>
+            <span class="model">Gemini 3.5 Flash</span><span class="score">28.3%</span><span>149.2k</span><span>15m</span><span>$5.7</span>
+          </div>
+          <p style="margin-top:16px">
+            GPT-5.5 leads at 70% while also being the most token-efficient top model in the blog's
+            chart. GPT-5.4 is lower scoring but cheaper per trial. Claude Opus 4.7 is close in
+            accuracy to GPT-5.4, but uses more tokens, takes longer, and costs substantially more.
+          </p>
+        </div>
+        <div class="card callout">
+          <h3>Behavioral takeaways</h3>
+          <ul>
+            <li>GPT models are described as implementing the visible contract especially literally; GPT-5.5 has the lowest missed-requirement rate in the qualitative analysis.</li>
+            <li>Claude configurations more often miss mirrored requirements in multi-part prompts, such as implementing sync behavior without the async counterpart.</li>
+            <li>Stronger agents self-test more often on DeepSWE. Claude Opus 4.7 and GPT-5.4 authored new tests in more than 80% of reviewed DeepSWE runs.</li>
+            <li>Output tokens, duration, and cost vary by an order of magnitude, but none strongly predicts pass rate.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>8. Engineering implications</h2>
         <p>DeepSWE evaluates end-to-end coding-agent capabilities: repository navigation, build-system fluency, implementation quality, and test-driven correctness.</p>
       </div>
       <div class="grid three-col">
@@ -620,7 +749,7 @@
     </section>
 
     <footer>
-      Generated from repository inspection of DeepSWE task metadata, README, verifier scripts, Dockerfiles, and representative task artifacts.
+      Generated from repository inspection plus the DeepSWE launch blog and public chart artifacts at deepswe.datacurve.ai.
     </footer>
   </main>
 </body>
