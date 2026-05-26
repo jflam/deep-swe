@@ -57,3 +57,13 @@ Single task:
 ```bash
 pier run -p deep-swe/tasks/<task-id> --agent mini-swe-agent
 ```
+
+## Local task browser
+
+This repository includes a Bun/TypeScript browser for reviewing the task corpus locally:
+
+```bash
+bun run task-browser
+```
+
+Open <http://localhost:4173> to search tasks, read the agent prompt, inspect task metadata, and review the reference solution or verifier patch in a GitHub-style diff viewer. Set `PORT=...` to use a different localhost port.

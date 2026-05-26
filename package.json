@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "task-browser": "bun run task-browser/server.ts",
+    "browse:tasks": "bun run task-browser/server.ts"
+  }
+}
