@@ -269,7 +269,7 @@ function parsePatch(patch: string): PatchFile[] {
       current.lines.push({
         kind: "add",
         oldNumber: null,
-        newNumber,
+        newNumber: newLine,
         content,
       });
       newLine += 1;
@@ -292,7 +292,7 @@ function parsePatch(patch: string): PatchFile[] {
       current.lines.push({
         kind: "context",
         oldNumber: oldLine,
-        newNumber,
+        newNumber: newLine,
         content,
       });
       oldLine += 1;
