@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DeepSWE Technical Analysis</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --panel: rgba(15, 26, 45, 0.82);
+      --panel-strong: rgba(22, 38, 65, 0.94);
+      --line: rgba(148, 163, 184, 0.26);
+      --text: #eef5ff;
+      --muted: #aab8cc;
+      --blue: #6ee7ff;
+      --violet: #a78bfa;
+      --green: #7dd3a8;
+      --amber: #facc6b;
+      --rose: #fb7185;
+      --shadow: 0 22px 70px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 10%, rgba(103, 232, 249, 0.22), transparent 26rem),
+        radial-gradient(circle at 82% 0%, rgba(167, 139, 250, 0.22), transparent 30rem),
+        radial-gradient(circle at 55% 90%, rgba(125, 211, 168, 0.12), transparent 26rem),
+        var(--bg);
+    }
+
+    a {
+      color: var(--blue);
+    }
+
+    .deck {
+      width: min(1180px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 44px 0 56px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      padding: 44px;
+      background: linear-gradient(135deg, rgba(18, 32, 56, 0.96), rgba(8, 16, 30, 0.88));
+      box-shadow: var(--shadow);
+    }
+
+    .hero:after {
+      content: "";
+      position: absolute;
+      inset: -40% -20% auto auto;
+      width: 520px;
+      height: 520px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(110, 231, 255, 0.16), transparent 64%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      margin: 0 0 18px;
+      color: var(--blue);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow:before {
+      content: "";
+      display: inline-block;
+      width: 34px;
+      height: 2px;
+      background: var(--blue);
+      box-shadow: 0 0 18px rgba(110, 231, 255, 0.9);
+    }
+
+    h1 {
+      max-width: 840px;
+      margin: 0;
+      font-size: clamp(2.6rem, 6vw, 5.2rem);
+      line-height: 0.94;
+      letter-spacing: -0.07em;
+    }
+
+    .lead {
+      max-width: 820px;
+      margin: 24px 0 0;
+      color: var(--muted);
+      font-size: clamp(1.05rem, 2vw, 1.35rem);
+      line-height: 1.55;
+    }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .metrics {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      margin-top: 28px;
+    }
+
+    .metric,
+    .card,
+    .flow-step,
+    .bar-card {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .metric {
+      border-radius: 20px;
+      padding: 20px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 2.25rem;
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .section {
+      margin-top: 28px;
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: end;
+      margin: 42px 0 16px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: clamp(1.7rem, 3vw, 2.45rem);
+      line-height: 1;
+      letter-spacing: -0.045em;
+    }
+
+    .section-title p {
+      max-width: 560px;
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+      text-align: right;
+    }
+
+    .two-col {
+      grid-template-columns: 1.04fr 0.96fr;
+    }
+
+    .three-col {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card {
+      border-radius: 24px;
+      padding: 24px;
+    }
+
+    .card h3 {
+      margin: 0 0 12px;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .card p,
+    .card li {
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .card p {
+      margin: 0;
+    }
+
+    .card ul {
+      margin: 0;
+      padding-left: 1.15rem;
+    }
+
+    .mono {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.88rem;
+    }
+
+    .tree {
+      margin: 0;
+      padding: 18px;
+      border-radius: 18px;
+      color: #d8e8ff;
+      background: rgba(2, 8, 18, 0.58);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      overflow: auto;
+      line-height: 1.55;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(110, 231, 255, 0.3);
+      border-radius: 999px;
+      padding: 8px 12px;
+      color: #dff8ff;
+      background: rgba(110, 231, 255, 0.08);
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .bars {
+      grid-template-columns: 1.1fr 0.9fr;
+    }
+
+    .bar-card {
+      border-radius: 24px;
+      padding: 24px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 110px 1fr 42px;
+      gap: 12px;
+      align-items: center;
+      margin: 15px 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .bar-track {
+      overflow: hidden;
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.16);
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--blue), var(--violet));
+    }
+
+    .flow {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      counter-reset: flow;
+    }
+
+    .flow-step {
+      position: relative;
+      min-height: 190px;
+      border-radius: 24px;
+      padding: 22px;
+    }
+
+    .flow-step:before {
+      counter-increment: flow;
+      content: counter(flow);
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      margin-bottom: 18px;
+      border-radius: 12px;
+      color: #03121c;
+      background: var(--blue);
+      font-weight: 900;
+    }
+
+    .flow-step h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    .flow-step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 16px;
+      font-size: 0.92rem;
+    }
+
+    th,
+    td {
+      padding: 13px 14px;
+      text-align: left;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+    }
+
+    th {
+      color: #dcecff;
+      background: rgba(148, 163, 184, 0.1);
+    }
+
+    td {
+      color: var(--muted);
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .callout {
+      border-color: rgba(125, 211, 168, 0.35);
+      background: linear-gradient(135deg, rgba(22, 101, 52, 0.22), rgba(15, 26, 45, 0.82));
+    }
+
+    .risk {
+      border-color: rgba(250, 204, 107, 0.36);
+      background: linear-gradient(135deg, rgba(120, 53, 15, 0.22), rgba(15, 26, 45, 0.82));
+    }
+
+    footer {
+      margin-top: 28px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 980px) {
+      .metrics,
+      .three-col,
+      .flow,
+      .two-col,
+      .bars {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .section-title {
+        display: block;
+      }
+
+      .section-title p {
+        margin-top: 10px;
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .deck {
+        width: min(100vw - 24px, 1180px);
+        padding: 18px 0 32px;
+      }
+
+      .hero {
+        padding: 28px;
+        border-radius: 24px;
+      }
+
+      .metrics,
+      .three-col,
+      .flow,
+      .two-col,
+      .bars {
+        grid-template-columns: 1fr;
+      }
+
+      .bar-row {
+        grid-template-columns: 88px 1fr 34px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <section class="hero">
+      <p class="eyebrow">Repository technical analysis</p>
+      <h1>DeepSWE is a long-horizon coding-agent benchmark corpus.</h1>
+      <p class="lead">
+        The repository is not an application runtime; it is a curated suite of reproducible,
+        air-gapped software engineering tasks. Each task pins an upstream repository commit,
+        supplies a Docker environment, provides an agent-facing prompt, and grades behavior
+        through a patch-based verifier.
+      </p>
+      <div class="grid metrics">
+        <div class="metric"><strong>113</strong><span>benchmark tasks</span></div>
+        <div class="metric"><strong>92</strong><span>upstream repositories</span></div>
+        <div class="metric"><strong>5</strong><span>programming languages</span></div>
+        <div class="metric"><strong>0</strong><span>internet-enabled tasks</span></div>
+        <div class="metric"><strong>30m</strong><span>verifier timeout</span></div>
+        <div class="metric"><strong>90m</strong><span>agent timeout</span></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>1. Repository shape</h2>
+        <p>The repo is intentionally shallow at the top level: documentation plus task directories. Complexity lives inside task capsules.</p>
+      </div>
+      <div class="grid two-col">
+        <div class="card">
+          <h3>Canonical task contract</h3>
+          <pre class="tree mono">tasks/&lt;task-id&gt;/
+  task.toml                 metadata, resource limits, image
+  instruction.md            prompt shown to the coding agent
+  environment/Dockerfile    fallback build recipe for /app
+  tests/test.sh             verifier orchestration wrapper
+  tests/test.patch          behavior tests applied at grading time
+  solution/solve.sh         applies the reference patch
+  solution/solution.patch   held-out reference implementation</pre>
+        </div>
+        <div class="card">
+          <h3>Design intent</h3>
+          <ul>
+            <li>Benchmark tasks are reproducible through pinned upstream commits and prebuilt images.</li>
+            <li>Agent submissions are evaluated by observable behavior, not by matching reference code.</li>
+            <li>Reference solutions are present for review and calibration, but are not used during grading.</li>
+            <li>Pier/Harbor metadata separates agent budget, verifier budget, and environment resources.</li>
+          </ul>
+          <div class="pill-row">
+            <span class="pill">Harbor format</span>
+            <span class="pill">Pier compatible</span>
+            <span class="pill">Patch-based tests</span>
+            <span class="pill">Air-gapped tasks</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>2. Corpus composition</h2>
+        <p>Coverage is balanced across Python, Go, and TypeScript, with smaller Rust and JavaScript slices.</p>
+      </div>
+      <div class="grid bars">
+        <div class="bar-card">
+          <h3>Language distribution</h3>
+          <div class="bar-row"><span>TypeScript</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><strong>35</strong></div>
+          <div class="bar-row"><span>Go</span><div class="bar-track"><div class="bar-fill" style="width:97%"></div></div><strong>34</strong></div>
+          <div class="bar-row"><span>Python</span><div class="bar-track"><div class="bar-fill" style="width:97%"></div></div><strong>34</strong></div>
+          <div class="bar-row"><span>Rust</span><div class="bar-track"><div class="bar-fill" style="width:14%"></div></div><strong>5</strong></div>
+          <div class="bar-row"><span>JavaScript</span><div class="bar-track"><div class="bar-fill" style="width:14%"></div></div><strong>5</strong></div>
+        </div>
+        <div class="bar-card">
+          <h3>Task categories</h3>
+          <div class="bar-row"><span>Feature</span><div class="bar-track"><div class="bar-fill" style="width:100%; background:linear-gradient(90deg,var(--green),var(--blue))"></div></div><strong>106</strong></div>
+          <div class="bar-row"><span>Bugfix</span><div class="bar-track"><div class="bar-fill" style="width:4%; background:var(--rose)"></div></div><strong>4</strong></div>
+          <div class="bar-row"><span>Enhance</span><div class="bar-track"><div class="bar-fill" style="width:3%; background:var(--amber)"></div></div><strong>3</strong></div>
+          <p style="margin-top:20px;color:var(--muted);line-height:1.55">
+            The benchmark emphasizes greenfield feature work within existing projects. This increases
+            architectural burden: successful agents must infer local APIs, add implementation paths, and
+            wire tests without relying on isolated bug-local patches.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>3. Execution and grading pipeline</h2>
+        <p>Every task uses the same normalized verifier wrapper, differing mainly by pinned commit and task-specific test patch.</p>
+      </div>
+      <div class="grid flow">
+        <div class="flow-step">
+          <h3>Checkout</h3>
+          <p>Dockerfile clones the upstream repository into <span class="mono">/app</span> and checks out the task base commit.</p>
+        </div>
+        <div class="flow-step">
+          <h3>Agent edit</h3>
+          <p>The agent receives <span class="mono">instruction.md</span> and modifies the cloned project under the configured budget.</p>
+        </div>
+        <div class="flow-step">
+          <h3>Capture patch</h3>
+          <p>Verifier soft-resets to the base commit and writes the model diff to <span class="mono">/logs/artifacts/model.patch</span>.</p>
+        </div>
+        <div class="flow-step">
+          <h3>Apply tests</h3>
+          <p>Files touched by <span class="mono">tests/test.patch</span> are reset, then hidden or task-added tests are applied.</p>
+        </div>
+        <div class="flow-step">
+          <h3>Score</h3>
+          <p><span class="mono">test.sh base</span> and <span class="mono">test.sh new</span> must both exit zero to write reward <span class="mono">1</span>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>4. Metadata and resource profile</h2>
+        <p>The corpus is deliberately uniform in infrastructure so score differences reflect task-solving ability more than environment variance.</p>
+      </div>
+      <div class="grid three-col">
+        <div class="card">
+          <h3>Uniform environment</h3>
+          <table>
+            <tr><th>Setting</th><th>Value</th></tr>
+            <tr><td>Internet</td><td>false for 113/113</td></tr>
+            <tr><td>CPU</td><td>2 cores</td></tr>
+            <tr><td>Memory</td><td>8192 MB</td></tr>
+            <tr><td>Storage</td><td>20480 MB</td></tr>
+            <tr><td>Build timeout</td><td>1800 seconds</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Repository diversity</h3>
+          <p>
+            The 113 tasks span 92 unique upstream repositories. Most repositories appear once,
+            while a small number intentionally contribute multiple related tasks.
+          </p>
+          <div class="pill-row">
+            <span class="pill">77 repos x 1 task</span>
+            <span class="pill">11 repos x 2 tasks</span>
+            <span class="pill">3 repos x 3 tasks</span>
+            <span class="pill">1 repo x 5 tasks</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Largest repeat sources</h3>
+          <table>
+            <tr><th>Repository</th><th>Tasks</th></tr>
+            <tr><td>pmndrs/koota</td><td>5</td></tr>
+            <tr><td>PyCQA/bandit</td><td>3</td></tr>
+            <tr><td>encode/httpx</td><td>3</td></tr>
+            <tr><td>platers/obsidian-linter</td><td>3</td></tr>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>5. Artifact scale</h2>
+        <p>The tests and reference patches are large enough to exercise integration behavior, not just isolated functions.</p>
+      </div>
+      <div class="grid two-col">
+        <div class="card">
+          <h3>Line-count profile</h3>
+          <table>
+            <tr><th>Artifact</th><th>Median</th><th>P90</th><th>Total</th></tr>
+            <tr><td>instruction.md</td><td>13</td><td>37</td><td>2,051</td></tr>
+            <tr><td>tests/test.patch</td><td>823</td><td>1,782</td><td>112,832</td></tr>
+            <tr><td>solution.patch</td><td>844</td><td>1,215</td><td>98,250</td></tr>
+            <tr><td>Dockerfile</td><td>9</td><td>16</td><td>1,181</td></tr>
+          </table>
+        </div>
+        <div class="card callout">
+          <h3>Technical signal</h3>
+          <p>
+            Median verifier patches and reference patches are both around 800 lines, which
+            indicates tasks often require broad implementation plus comprehensive tests. The
+            short prompts force agents to recover intent from codebase context, while the large
+            verifier patches encode nuanced behavioral contracts.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>6. Engineering implications</h2>
+        <p>DeepSWE evaluates end-to-end coding-agent capabilities: repository navigation, build-system fluency, implementation quality, and test-driven correctness.</p>
+      </div>
+      <div class="grid three-col">
+        <div class="card">
+          <h3>Strengths</h3>
+          <ul>
+            <li>Pinned commits and prebuilt images make results reproducible.</li>
+            <li>Air-gapped execution prevents dependency lookup shortcuts.</li>
+            <li>Base and new test modes preserve existing behavior while testing the requested change.</li>
+            <li>Model patch capture supports trajectory review and post-hoc diagnosis.</li>
+          </ul>
+        </div>
+        <div class="card risk">
+          <h3>Operational risks</h3>
+          <ul>
+            <li>All tasks depend on availability of base images or Dockerfile rebuilds.</li>
+            <li>Large patches can be expensive to inspect manually during curation.</li>
+            <li>Uniform resource limits simplify comparisons but may underfit unusually heavy upstream projects.</li>
+            <li>Reference solutions are visible in-repo, so benchmark consumers must isolate agents from them.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Best use cases</h3>
+          <ul>
+            <li>Comparing frontier coding agents on realistic multi-file changes.</li>
+            <li>Studying failure modes through captured diffs and trajectories.</li>
+            <li>Sampling deterministic subsets for fast regression testing.</li>
+            <li>Running single tasks to debug agent environment integration.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      Generated from repository inspection of DeepSWE task metadata, README, verifier scripts, Dockerfiles, and representative task artifacts.
+    </footer>
+  </main>
+</body>
+</html>
