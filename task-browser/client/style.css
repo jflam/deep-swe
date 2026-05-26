@@ -20,6 +20,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   display: grid;
   grid-template-columns: 380px minmax(0, 1fr);
