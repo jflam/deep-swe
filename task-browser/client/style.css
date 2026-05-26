@@ -137,6 +137,7 @@ a:focus-visible {
   color: var(--text);
   background: var(--panel-soft);
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -144,6 +145,7 @@ a:focus-visible {
 .task-row.selected {
   border-color: var(--accent);
   background: rgba(88, 166, 255, 0.1);
+  text-decoration: none;
 }
 
 .task-row-title {
