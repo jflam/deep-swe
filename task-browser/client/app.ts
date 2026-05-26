@@ -70,6 +70,15 @@ const languageFilter = mustGet<HTMLSelectElement>("language-filter");
 const categoryFilter = mustGet<HTMLSelectElement>("category-filter");
 let selectionRequestId = 0;
 
+function debug(event: string, details: Record<string, unknown> = {}): void {
+  console.info(`[DeepSWE task browser] ${event}`, {
+    ...details,
+    selectedTaskId: state.selectedTaskId,
+    activePatch: state.activePatch,
+    hash: location.hash,
+  });
+}
+
 function mustGet<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
   if (!element) {
@@ -102,18 +111,25 @@ function taskHash(taskId: string): string {
 function taskIdFromHash(): string {
   const hash = location.hash.slice(1);
   if (!hash) {
+    debug("hash parsed", { rawHash: hash, taskId: "" });
     return "";
   }
 
   if (hash.startsWith("task/")) {
-    return decodeURIComponent(hash.slice("task/".length));
+    const taskId = decodeURIComponent(hash.slice("task/".length));
+    debug("hash parsed", { rawHash: hash, taskId, format: "task-prefix" });
+    return taskId;
   }
 
-  return state.tasks.some((task) => task.id === hash) ? hash : "";
+  const taskId = state.tasks.some((task) => task.id === hash) ? hash : "";
+  debug("hash parsed", { rawHash: hash, taskId, format: "legacy-or-ignored" });
+  return taskId;
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
+  debug("fetch start", { url });
   const response = await fetch(url);
+  debug("fetch response", { url, ok: response.ok, status: response.status });
   if (!response.ok) {
     throw new Error(`${response.status} ${response.statusText}`);
   }
@@ -127,6 +143,7 @@ function uniqueSorted(values: string[]): string[] {
 function renderFilters(): void {
   const languages = uniqueSorted(state.tasks.map((task) => task.language));
   const categories = uniqueSorted(state.tasks.map((task) => task.category));
+  debug("render filters", { languages, categories });
 
   languageFilter.innerHTML = [
     `<option value="all">All languages</option>`,
@@ -175,6 +192,14 @@ function filteredTasks(): TaskSummary[] {
 function renderTaskList(): void {
   const tasks = filteredTasks();
   taskCount.textContent = `${tasks.length} of ${state.tasks.length} tasks`;
+  debug("render task list", {
+    visibleTasks: tasks.length,
+    totalTasks: state.tasks.length,
+    search: state.search,
+    language: state.language,
+    category: state.category,
+    firstVisibleTask: tasks[0]?.id ?? null,
+  });
 
   if (tasks.length === 0) {
     taskList.innerHTML = `<div class="no-results">No matching tasks.</div>`;
@@ -495,6 +520,12 @@ function renderArtifacts(task: TaskDetail): string {
 }
 
 function renderTaskDetail(task: TaskDetail): void {
+  debug("render task detail", {
+    taskId: task.id,
+    title: task.title,
+    solutionPatchBytes: task.solutionPatch.length,
+    testPatchBytes: task.testPatch.length,
+  });
   emptyState.hidden = true;
   taskDetail.hidden = false;
   taskDetail.innerHTML = `
@@ -514,52 +545,100 @@ function renderTaskDetail(task: TaskDetail): void {
 
 async function selectTask(taskId: string): Promise<void> {
   const requestId = ++selectionRequestId;
+  debug("select task start", { taskId, requestId });
   state.selectedTaskId = taskId;
   renderTaskList();
   taskDetail.hidden = false;
   emptyState.hidden = true;
   taskDetail.innerHTML = `<div class="loading">Loading ${escapeHtml(taskId)}...</div>`;
 
-  const task = await fetchJson<TaskDetail>(`/api/tasks/${encodeURIComponent(taskId)}`);
-  if (requestId !== selectionRequestId) {
+  let task: TaskDetail;
+  try {
+    task = await fetchJson<TaskDetail>(`/api/tasks/${encodeURIComponent(taskId)}`);
+  } catch (error) {
+    console.error("[DeepSWE task browser] select task failed", {
+      taskId,
+      requestId,
+      error,
+    });
+    taskDetail.innerHTML = `
+      <div class="loading">
+        Failed to load ${escapeHtml(taskId)}:
+        ${escapeHtml(error instanceof Error ? error.message : String(error))}
+      </div>
+    `;
     return;
   }
+
+  if (requestId !== selectionRequestId) {
+    debug("select task stale response ignored", {
+      taskId,
+      requestId,
+      latestRequestId: selectionRequestId,
+    });
+    return;
+  }
+
+  debug("select task fetched", {
+    taskId,
+    requestId,
+    fetchedTaskId: task.id,
+  });
   renderTaskDetail(task);
 
   const nextHash = taskHash(taskId);
   if (location.hash !== nextHash) {
+    debug("replace hash", { taskId, nextHash });
     history.replaceState(null, "", nextHash);
   }
 }
 
 function bindEvents(): void {
+  debug("binding events");
   searchInput.addEventListener("input", () => {
     state.search = searchInput.value;
+    debug("search changed", { value: state.search });
     renderTaskList();
   });
 
   languageFilter.addEventListener("change", () => {
     state.language = languageFilter.value;
+    debug("language filter changed", { value: state.language });
     renderTaskList();
   });
 
   categoryFilter.addEventListener("change", () => {
     state.category = categoryFilter.value;
+    debug("category filter changed", { value: state.category });
     renderTaskList();
   });
 
   taskList.addEventListener("click", (event) => {
-    const row = (event.target as HTMLElement).closest<HTMLElement>("[data-task-id]");
+    const target = event.target;
+    debug("task list click", {
+      targetTag: target instanceof Element ? target.tagName : String(target),
+      targetText: target instanceof Element ? target.textContent?.trim().slice(0, 80) : null,
+    });
+
+    if (!(target instanceof Element)) {
+      debug("task list click ignored", { reason: "target is not an Element" });
+      return;
+    }
+
+    const row = target.closest<HTMLElement>("[data-task-id]");
     if (!row) {
+      debug("task list click ignored", { reason: "no data-task-id ancestor" });
       return;
     }
 
     const taskId = row.dataset.taskId;
     if (!taskId) {
+      debug("task list click ignored", { reason: "missing dataset.taskId" });
       return;
     }
 
     event.preventDefault();
+    debug("task row selected", { taskId, href: row.getAttribute("href") });
     void selectTask(taskId);
   });
 
@@ -575,28 +654,41 @@ function bindEvents(): void {
     }
 
     state.activePatch = patch;
+    debug("patch tab selected", { patch });
     if (state.selectedTaskId) {
       void selectTask(state.selectedTaskId);
     }
   });
 
   window.addEventListener("hashchange", () => {
+    debug("hashchange event");
     const taskId = taskIdFromHash();
     if (taskId && taskId !== state.selectedTaskId) {
       void selectTask(taskId);
+    } else {
+      debug("hashchange ignored", { taskId });
     }
   });
 }
 
 async function init(): Promise<void> {
+  debug("init start", {
+    userAgent: navigator.userAgent,
+    url: location.href,
+  });
   bindEvents();
   const payload = await fetchJson<{ tasks: TaskSummary[] }>("/api/tasks");
   state.tasks = payload.tasks;
+  debug("tasks loaded", {
+    totalTasks: state.tasks.length,
+    firstTask: state.tasks[0]?.id ?? null,
+  });
   renderFilters();
   renderTaskList();
 
   const hashTask = taskIdFromHash();
   const initialTask = state.tasks.some((task) => task.id === hashTask) ? hashTask : state.tasks[0]?.id;
+  debug("initial task resolved", { hashTask, initialTask });
   if (initialTask) {
     await selectTask(initialTask);
   }
