@@ -68,6 +68,7 @@ const emptyState = mustGet<HTMLElement>("empty-state");
 const searchInput = mustGet<HTMLInputElement>("search");
 const languageFilter = mustGet<HTMLSelectElement>("language-filter");
 const categoryFilter = mustGet<HTMLSelectElement>("category-filter");
+let selectionRequestId = 0;
 
 function mustGet<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -92,6 +93,23 @@ function formatCategory(category: string): string {
 
 function shortCommit(commit: string): string {
   return commit ? commit.slice(0, 10) : "";
+}
+
+function taskHash(taskId: string): string {
+  return `#task/${encodeURIComponent(taskId)}`;
+}
+
+function taskIdFromHash(): string {
+  const hash = location.hash.slice(1);
+  if (!hash) {
+    return "";
+  }
+
+  if (hash.startsWith("task/")) {
+    return decodeURIComponent(hash.slice("task/".length));
+  }
+
+  return state.tasks.some((task) => task.id === hash) ? hash : "";
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -167,7 +185,7 @@ function renderTaskList(): void {
     .map((task) => {
       const selected = task.id === state.selectedTaskId ? " selected" : "";
       return `
-        <button class="task-row${selected}" data-task-id="${escapeHtml(task.id)}">
+        <a class="task-row${selected}" href="${taskHash(task.id)}" data-task-id="${escapeHtml(task.id)}">
           <span class="task-row-title">${escapeHtml(task.title)}</span>
           <span class="task-row-id">${escapeHtml(task.id)}</span>
           <span class="task-row-meta">
@@ -175,7 +193,7 @@ function renderTaskList(): void {
             <span>${escapeHtml(formatCategory(task.category))}</span>
             <span>${task.solutionPatchStats.files} files</span>
           </span>
-        </button>
+        </a>
       `;
     })
     .join("");
@@ -495,6 +513,7 @@ function renderTaskDetail(task: TaskDetail): void {
 }
 
 async function selectTask(taskId: string): Promise<void> {
+  const requestId = ++selectionRequestId;
   state.selectedTaskId = taskId;
   renderTaskList();
   taskDetail.hidden = false;
@@ -502,10 +521,14 @@ async function selectTask(taskId: string): Promise<void> {
   taskDetail.innerHTML = `<div class="loading">Loading ${escapeHtml(taskId)}...</div>`;
 
   const task = await fetchJson<TaskDetail>(`/api/tasks/${encodeURIComponent(taskId)}`);
+  if (requestId !== selectionRequestId) {
+    return;
+  }
   renderTaskDetail(task);
 
-  if (location.hash !== `#${taskId}`) {
-    history.replaceState(null, "", `#${taskId}`);
+  const nextHash = taskHash(taskId);
+  if (location.hash !== nextHash) {
+    history.replaceState(null, "", nextHash);
   }
 }
 
@@ -526,11 +549,18 @@ function bindEvents(): void {
   });
 
   taskList.addEventListener("click", (event) => {
-    const row = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-task-id]");
+    const row = (event.target as HTMLElement).closest<HTMLElement>("[data-task-id]");
     if (!row) {
       return;
     }
-    void selectTask(row.dataset.taskId ?? "");
+
+    const taskId = row.dataset.taskId;
+    if (!taskId) {
+      return;
+    }
+
+    event.preventDefault();
+    void selectTask(taskId);
   });
 
   taskDetail.addEventListener("click", (event) => {
@@ -551,7 +581,7 @@ function bindEvents(): void {
   });
 
   window.addEventListener("hashchange", () => {
-    const taskId = decodeURIComponent(location.hash.slice(1));
+    const taskId = taskIdFromHash();
     if (taskId && taskId !== state.selectedTaskId) {
       void selectTask(taskId);
     }
@@ -565,7 +595,7 @@ async function init(): Promise<void> {
   renderFilters();
   renderTaskList();
 
-  const hashTask = decodeURIComponent(location.hash.slice(1));
+  const hashTask = taskIdFromHash();
   const initialTask = state.tasks.some((task) => task.id === hashTask) ? hashTask : state.tasks[0]?.id;
   if (initialTask) {
     await selectTask(initialTask);
