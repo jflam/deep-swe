@@ -315,6 +315,74 @@ a:focus-visible {
   white-space: pre-wrap;
 }
 
+.prompt.markdown {
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.65;
+  white-space: normal;
+}
+
+.markdown > * {
+  max-width: 920px;
+}
+
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  margin: 1.25rem 0 0.45rem;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.markdown h3:first-child,
+.markdown h4:first-child,
+.markdown h5:first-child,
+.markdown h6:first-child,
+.markdown p:first-child,
+.markdown ul:first-child,
+.markdown pre:first-child {
+  margin-top: 0;
+}
+
+.markdown p,
+.markdown ul {
+  margin: 0.85rem 0;
+}
+
+.markdown ul {
+  padding-left: 1.4rem;
+}
+
+.markdown li {
+  margin: 0.35rem 0;
+}
+
+.markdown code {
+  border: 1px solid rgba(139, 148, 158, 0.24);
+  border-radius: 6px;
+  padding: 0.12rem 0.32rem;
+  color: #f0f6fc;
+  background: rgba(110, 118, 129, 0.22);
+  font-family: var(--code);
+  font-size: 0.9em;
+}
+
+.markdown pre {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  background: #0d1117;
+}
+
+.markdown pre code {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font-size: 0.88rem;
+}
+
 .patch-toolbar {
   align-items: end;
 }
