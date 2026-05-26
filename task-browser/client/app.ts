@@ -96,6 +96,117 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+function renderInlineMarkdown(value: string): string {
+  let html = "";
+  let index = 0;
+
+  while (index < value.length) {
+    const tick = value.indexOf("`", index);
+    if (tick === -1) {
+      html += escapeHtml(value.slice(index));
+      break;
+    }
+
+    const endTick = value.indexOf("`", tick + 1);
+    if (endTick === -1) {
+      html += escapeHtml(value.slice(index));
+      break;
+    }
+
+    html += escapeHtml(value.slice(index, tick));
+    html += `<code>${escapeHtml(value.slice(tick + 1, endTick))}</code>`;
+    index = endTick + 1;
+  }
+
+  return html;
+}
+
+function renderMarkdown(markdown: string): string {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const html: string[] = [];
+  let paragraph: string[] = [];
+  let listItems: string[] = [];
+  let codeLines: string[] = [];
+  let inCodeBlock = false;
+
+  const flushParagraph = () => {
+    if (paragraph.length === 0) {
+      return;
+    }
+
+    html.push(`<p>${renderInlineMarkdown(paragraph.join(" "))}</p>`);
+    paragraph = [];
+  };
+
+  const flushList = () => {
+    if (listItems.length === 0) {
+      return;
+    }
+
+    html.push(`<ul>${listItems.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</ul>`);
+    listItems = [];
+  };
+
+  const flushCode = () => {
+    html.push(`<pre><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+    codeLines = [];
+  };
+
+  for (const line of lines) {
+    const fence = /^```/.test(line.trim());
+    if (fence) {
+      if (inCodeBlock) {
+        flushCode();
+        inCodeBlock = false;
+      } else {
+        flushParagraph();
+        flushList();
+        inCodeBlock = true;
+        codeLines = [];
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeLines.push(line);
+      continue;
+    }
+
+    if (!line.trim()) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    const heading = /^(#{1,4})\s+(.+)$/.exec(line);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      const level = heading[1].length + 2;
+      html.push(`<h${level}>${renderInlineMarkdown(heading[2].trim())}</h${level}>`);
+      continue;
+    }
+
+    const listItem = /^\s*[-*]\s+(.+)$/.exec(line);
+    if (listItem) {
+      flushParagraph();
+      listItems.push(listItem[1].trim());
+      continue;
+    }
+
+    flushList();
+    paragraph.push(line.trim());
+  }
+
+  if (inCodeBlock) {
+    flushCode();
+  }
+  flushParagraph();
+  flushList();
+
+  return html.join("");
+}
+
 function formatCategory(category: string): string {
   return category.replace(/_/g, " ");
 }
@@ -388,7 +499,7 @@ function renderPrompt(task: TaskDetail): string {
         <h2>Agent prompt</h2>
         <span>${task.promptLines} lines</span>
       </div>
-      <pre class="prompt">${escapeHtml(task.prompt)}</pre>
+      <div class="prompt markdown">${renderMarkdown(task.prompt)}</div>
     </section>
   `;
 }
